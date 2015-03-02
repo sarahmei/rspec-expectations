@@ -1,7 +1,9 @@
+RSpec::Support.require_rspec_matchers "expected_actual_pairing_solver"
+
 module RSpec
   module Matchers
     class PairingsMaximizer
-      Solution = Struct.new(:unmatched_expected_indices,     :unmatched_actual_indices,
+      Solution = Struct.new(:unmatched_expected_indices, :unmatched_actual_indices,
                             :indeterminate_expected_indices, :indeterminate_actual_indices) do
         def worse_than?(other)
           unmatched_item_count > other.unmatched_item_count
@@ -14,7 +16,7 @@ module RSpec
 
         def ideal?
           candidate? && (
-            unmatched_expected_indices.empty? ||
+          unmatched_expected_indices.empty? ||
             unmatched_actual_indices.empty?
           )
         end
@@ -26,7 +28,7 @@ module RSpec
         def +(derived_candidate_solution)
           self.class.new(
             unmatched_expected_indices + derived_candidate_solution.unmatched_expected_indices,
-            unmatched_actual_indices   + derived_candidate_solution.unmatched_actual_indices,
+            unmatched_actual_indices + derived_candidate_solution.unmatched_actual_indices,
             # Ignore the indeterminate indices: by the time we get here,
             # we've dealt with all indeterminates.
             [], []
@@ -34,60 +36,8 @@ module RSpec
         end
       end
 
-      class MatchingIndicesGroup
-        attr_reader :matches
-
-        def initialize(size)
-          @matches = Hash[Array.new(size) { |index| [index, []] }]
-        end
-
-        def record_match(own_index, other_index)
-          matches[own_index] << other_index
-        end
-      end
-
-      class IndexMatch
-        def initialize(index_for_expected, index_for_actual)
-          @index_for_expected = index_for_expected
-          @index_for_actual = index_for_actual
-        end
-
-        def record_into_expected(matching_indices_group)
-          matching_indices_group.record_match(index_for_expected, index_for_actual)
-        end
-
-        def record_into_actual(matching_indices_group)
-          matching_indices_group.record_match(index_for_actual, index_for_expected)
-        end
-
-        protected
-
-        attr_reader :index_for_actual, :index_for_expected
-      end
-
       def self.best_solution(expected, actual, matching_proc)
-        #ExpectedActualPairingSolution.new
-        expected_matches = MatchingIndicesGroup.new(expected.size)
-        actual_matches   = MatchingIndicesGroup.new(actual.size)
-
-        index_matches = []
-        expected.each_with_index do |expected_value, index_for_expected_value|
-          actual.each_with_index do |actual_value, index_for_actual_value|
-            if matching_proc.call(expected_value, actual_value)
-              index_matches << IndexMatch.new(index_for_expected_value, index_for_actual_value)
-            end
-          end
-        end
-
-        index_matches.each do |index_match|
-          index_match.record_into_expected(expected_matches)
-          index_match.record_into_actual(actual_matches)
-        end
-
-        expected_matches = expected_matches.matches
-        actual_matches = actual_matches.matches
-
-        PairingsMaximizer.new(expected_matches, actual_matches).find_best_solution
+        ExpectedActualPairingSolver.new(expected, actual, matching_proc).call
       end
 
       attr_reader :expected_to_actual_matched_indices, :actual_to_expected_matched_indices, :solution
@@ -102,7 +52,7 @@ module RSpec
         unmatched_actual_indices, indeterminate_actual_indices =
           categorize_indices(actual_to_expected_matched_indices, expected_to_actual_matched_indices)
 
-        @solution = Solution.new(unmatched_expected_indices,     unmatched_actual_indices,
+        @solution = Solution.new(unmatched_expected_indices, unmatched_actual_indices,
                                  indeterminate_expected_indices, indeterminate_actual_indices)
       end
 
@@ -133,7 +83,7 @@ module RSpec
       end
 
       def categorize_indices(indices_to_categorize, other_indices)
-        unmatched     = []
+        unmatched = []
         indeterminate = []
 
         indices_to_categorize.each_pair do |index, matches|
@@ -157,15 +107,15 @@ module RSpec
           solution.indeterminate_expected_indices,
           expected_to_actual_matched_indices, actual_index)
 
-          modified_expecteds.delete(expected_index)
+        modified_expecteds.delete(expected_index)
 
-          modified_actuals   = apply_pairing_to(
-            solution.indeterminate_actual_indices,
-            actual_to_expected_matched_indices, expected_index)
+        modified_actuals = apply_pairing_to(
+          solution.indeterminate_actual_indices,
+          actual_to_expected_matched_indices, expected_index)
 
-            modified_actuals.delete(actual_index)
+        modified_actuals.delete(actual_index)
 
-            solution + self.class.new(modified_expecteds, modified_actuals).find_best_solution
+        solution + self.class.new(modified_expecteds, modified_actuals).find_best_solution
       end
 
       def apply_pairing_to(indeterminates, original_matches, other_list_index)
