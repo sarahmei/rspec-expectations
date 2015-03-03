@@ -72,7 +72,7 @@ module RSpec
             else
               count == 0
             end
-          else
+          elsif Hash === actual
             expected.__send__(predicate) do |expected_item|
               if comparing_hash_to_a_subset?(expected_item)
                 expected_item.__send__(hash_subset_predicate) do |(key, value)|
@@ -80,9 +80,11 @@ module RSpec
                 end
               elsif comparing_hash_keys?(expected_item)
                 actual_hash_has_key?(expected_item)
-              else
-                actual_collection_includes?(expected_item)
               end
+            end
+          else
+            expected.__send__(predicate) do |expected_item|
+              actual_collection_includes?(expected_item)
             end
           end
         end
