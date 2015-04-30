@@ -1,9 +1,13 @@
 module RSpec
   module Matchers
     class ExpectedActualPairingSolver
-      def initialize(expected, actual, matching_proc)
+      def self.best_solution(expected, actual)
+        new(expected, actual).call
+      end
+
+      def initialize(expected, actual)
         @expected_actual_indexes = ExpectedActualIndexes.new(expected.size, actual.size)
-        @match_iterator = MatchIterator.new(expected, actual, matching_proc)
+        @match_iterator = MatchIterator.new(expected, actual)
       end
 
       def call
@@ -51,16 +55,15 @@ module RSpec
 
 
     class MatchIterator
-      def initialize(expected, actual, matching_proc)
+      def initialize(expected, actual)
         @expected = expected
         @actual = actual
-        @matching_proc = matching_proc
       end
 
       def with_matching_locations(&blk)
         expected.each_with_index do |expected_value, expected_location|
           actual.each_with_index do |actual_value, actual_location|
-            if matching_proc.call(expected_value, actual_value)
+            if RSpec::Matchers::Composable.values_match?(expected_value, actual_value)
               blk.call(expected_location, actual_location)
             end
           end
@@ -69,7 +72,7 @@ module RSpec
 
       protected
 
-      attr_reader :expected, :actual, :matching_proc
+      attr_reader :expected, :actual
     end
 
     class MatchLocations
@@ -83,7 +86,5 @@ module RSpec
         locations[own_index] << other_index
       end
     end
-
-
   end
 end

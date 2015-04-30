@@ -3,43 +3,6 @@ RSpec::Support.require_rspec_matchers "expected_actual_pairing_solver"
 module RSpec
   module Matchers
     class PairingsMaximizer
-      Solution = Struct.new(:unmatched_expected_indices, :unmatched_actual_indices,
-                            :indeterminate_expected_indices, :indeterminate_actual_indices) do
-        def worse_than?(other)
-          unmatched_item_count > other.unmatched_item_count
-        end
-
-        def candidate?
-          indeterminate_expected_indices.empty? &&
-            indeterminate_actual_indices.empty?
-        end
-
-        def ideal?
-          candidate? && (
-          unmatched_expected_indices.empty? ||
-            unmatched_actual_indices.empty?
-          )
-        end
-
-        def unmatched_item_count
-          unmatched_expected_indices.count + unmatched_actual_indices.count
-        end
-
-        def +(derived_candidate_solution)
-          self.class.new(
-            unmatched_expected_indices + derived_candidate_solution.unmatched_expected_indices,
-            unmatched_actual_indices + derived_candidate_solution.unmatched_actual_indices,
-            # Ignore the indeterminate indices: by the time we get here,
-            # we've dealt with all indeterminates.
-            [], []
-          )
-        end
-      end
-
-      def self.best_solution(expected, actual, matching_proc)
-        ExpectedActualPairingSolver.new(expected, actual, matching_proc).call
-      end
-
       attr_reader :expected_to_actual_matched_indices, :actual_to_expected_matched_indices, :solution
 
       def initialize(expected_to_actual_matched_indices, actual_to_expected_matched_indices)
@@ -122,6 +85,38 @@ module RSpec
         indeterminates.inject({}) do |accum, index|
           accum[index] = original_matches[index] - [other_list_index]
           accum
+        end
+      end
+      Solution = Struct.new(:unmatched_expected_indices, :unmatched_actual_indices,
+                            :indeterminate_expected_indices, :indeterminate_actual_indices) do
+        def worse_than?(other)
+          unmatched_item_count > other.unmatched_item_count
+        end
+
+        def candidate?
+          indeterminate_expected_indices.empty? &&
+            indeterminate_actual_indices.empty?
+        end
+
+        def ideal?
+          candidate? && (
+          unmatched_expected_indices.empty? ||
+            unmatched_actual_indices.empty?
+          )
+        end
+
+        def unmatched_item_count
+          unmatched_expected_indices.count + unmatched_actual_indices.count
+        end
+
+        def +(derived_candidate_solution)
+          self.class.new(
+            unmatched_expected_indices + derived_candidate_solution.unmatched_expected_indices,
+            unmatched_actual_indices + derived_candidate_solution.unmatched_actual_indices,
+            # Ignore the indeterminate indices: by the time we get here,
+            # we've dealt with all indeterminates.
+            [], []
+          )
         end
       end
     end

@@ -67,6 +67,7 @@ module RSpec
         expected = with_matchers_cloned(expected)
         Support::FuzzyMatcher.values_match?(expected, actual)
       end
+      module_function :values_match?
 
       # Returns the description of the given object in a way that is
       # aware of composed matchers. If the object is a matcher with
@@ -113,6 +114,7 @@ module RSpec
           item
         end
       end
+      module_function :surface_descriptions_in
 
       # @private
       # Historically, a single matcher instance was only checked
@@ -147,6 +149,7 @@ module RSpec
           object
         end
       end
+      module_function :with_matchers_cloned
 
       if String.ancestors.include?(Enumerable) # 1.8.7
         # Strings are not enumerable on 1.9, and on 1.8 they are an infinitely
@@ -165,7 +168,7 @@ module RSpec
           Enumerable === item
         end
       end
-      module_function :surface_descriptions_in, :enumerable?
+      module_function :enumerable?
 
       # Wraps an item in order to surface its `description` via `inspect`.
       # @api private

@@ -61,24 +61,23 @@ module RSpec
           return false unless actual.respond_to?(:include?)
 
           if Array === actual
-            count = PairingsMaximizer.best_solution(
+            count = ExpectedActualPairingSolver.best_solution(
               expected,
-              actual,
-              method(:values_match?)
+              actual
             ).unmatched_expected_indices.count
 
             if predicate == :none?
               count == expected.size
-            else
+            elsif predicate == :all?
               count == 0
             end
           elsif Hash === actual
             expected.__send__(predicate) do |expected_item|
-              if comparing_hash_to_a_subset?(expected_item)
+              if Hash === expected_item
                 expected_item.__send__(hash_subset_predicate) do |(key, value)|
                   actual_hash_includes?(key, value)
                 end
-              elsif comparing_hash_keys?(expected_item)
+              else
                 actual_hash_has_key?(expected_item)
               end
             end
@@ -89,17 +88,9 @@ module RSpec
           end
         end
 
-        def comparing_hash_to_a_subset?(expected_item)
-          actual.is_a?(Hash) && expected_item.is_a?(Hash)
-        end
-
         def actual_hash_includes?(expected_key, expected_value)
           actual_value = actual.fetch(expected_key) { return false }
           values_match?(expected_value, actual_value)
-        end
-
-        def comparing_hash_keys?(expected_item)
-          actual.is_a?(Hash) && !expected_item.is_a?(Hash)
         end
 
         def actual_hash_has_key?(expected_key)

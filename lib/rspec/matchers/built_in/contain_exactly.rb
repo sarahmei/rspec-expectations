@@ -76,7 +76,7 @@ module RSpec
         end
 
         def best_solution
-          @best_solution ||= PairingsMaximizer.best_solution(expected, actual, method(:values_match?))
+          @best_solution ||= ExpectedActualPairingSolver.best_solution(expected, actual)
         end
       end
     end
