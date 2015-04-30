@@ -61,18 +61,18 @@ module RSpec
           return false unless actual.respond_to?(:include?)
 
           inclusion_checker = inclusion_checker(hash_subset_predicate)
-          if Array === actual
-            if predicate == :none?
-              inclusion_checker.call(0)
-            elsif predicate == :all?
-              inclusion_checker.call(expected.size)
-            end
+          inclusion_strategy = inclusion_strategy(predicate)
+
+          inclusion_checker.call(inclusion_strategy)
+        end
+
+        def inclusion_strategy(predicate)
+          if Array === actual && predicate == :none?
+            lambda { |x| x == 0 }
+          elsif Array == actual && predicate == :all?
+            lambda { |x| x == expected.size }
           else
-            if predicate == :none?
-              expected.none? { |expected_item| inclusion_checker.call(expected_item) }
-            elsif predicate == :all?
-              expected.all? { |expected_item| inclusion_checker.call(expected_item) }
-            end
+            RSpec::Support::KERNEL_METHOD_METHOD.bind(expected).call(predicate)
           end
         end
 
@@ -93,12 +93,12 @@ module RSpec
             @actual = actual
           end
 
-          def call(expected_matching_item_count)
+          def call(matching_proc)
             unmatched_item_count = ExpectedActualPairingSolver.best_solution(
               expected,
               actual
             ).unmatched_expected_indices.count
-            expected.count - unmatched_item_count == expected_matching_item_count
+            matching_proc.call(expected.count - unmatched_item_count)
           end
 
           protected
@@ -113,13 +113,15 @@ module RSpec
             @hash_subset_predicate = hash_subset_predicate
           end
 
-          def call(expected_item)
-            if Hash === expected_item
-              expected_item.__send__(hash_subset_predicate) do |(key, value)|
-                actual_hash_includes?(key, value)
+          def call(expected_predicate_method)
+            expected_predicate_method.call do |expected_item|
+              if Hash === expected_item
+                expected_item.__send__(hash_subset_predicate) do |(key, value)|
+                  actual_hash_includes?(key, value)
+                end
+              else
+                actual_hash_has_key?(expected_item)
               end
-            else
-              actual_hash_has_key?(expected_item)
             end
           end
 
@@ -152,8 +154,10 @@ module RSpec
             @actual = actual
           end
 
-          def call(expected_item)
-            actual_collection_includes?(expected_item)
+          def call(expected_predicate_method)
+            expected_predicate_method.call do |expected_item|
+              actual_collection_includes?(expected_item)
+            end
           end
 
           protected
